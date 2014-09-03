@@ -7,17 +7,57 @@ module Fluent
     end
 
     def start
-      super
+      @queue = {1 => [], 2 => [], 3 => []}
+      @alive = true
+      @mutex = Mutex.new
+      @cond = ConditionVariable.new
+      @thread = Thread.start do
+        @mutex.lock
+        while @alive
+          job_priority = (1..3).find {|i| !@queue[i].empty? }
+
+          if job_priority
+            job = @queue[job_priority].shift
+            @mutex.unlock
+            puts job
+            sleep 2
+            @mutex.lock
+          else
+            @cond.wait(@mutex)
+          end
+        end
+        puts "shutdown"
+        @mutex.unlock
+      end
     end
 
     def shutdown
-      super
+      @alive = false
+      @mutex.synchronize do
+        @cond.signal
+      end
+      @thread.join
     end
 
     def emit(tag, es, chain)
       chain.next
       es.each {|time,record|
-        $stderr.puts "OK!"
+        puts "Receive!"
+        priority = case record["job_priority"]
+                   when "high"
+                     1
+                   when "normal"
+                     2
+                   when "low"
+                     3
+                   else
+                     2
+                   end
+
+        @queue[priority].push(record)
+        @mutex.synchronize do
+          @cond.signal
+        end
       }
     end
   end
