@@ -54,8 +54,8 @@ module Fluent
                      2
                    end
 
-        @queue[priority].push(record)
         @mutex.synchronize do
+          @queue[priority].push(record)
           @cond.signal
         end
       }
