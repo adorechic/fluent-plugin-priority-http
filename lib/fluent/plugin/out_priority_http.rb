@@ -13,20 +13,22 @@ module Fluent
       @cond = ConditionVariable.new
       @thread = Thread.start do
         @mutex.lock
-        while @alive
+        while @alive || !@queue.values.all?(&:empty?)
           job_priority = (1..3).find {|i| !@queue[i].empty? }
 
           if job_priority
             job = @queue[job_priority].shift
             @mutex.unlock
-            puts job
-            sleep 2
+            uri = URI.parse("http://example.com/")
+            req = Net::HTTP::Post.new(uri.path)
+            res = Net::HTTP.start(uri.host, uri.port) do |http|
+              http.request(req, job.to_json)
+            end
             @mutex.lock
           else
             @cond.wait(@mutex)
           end
         end
-        puts "shutdown"
         @mutex.unlock
       end
     end
@@ -42,7 +44,6 @@ module Fluent
     def emit(tag, es, chain)
       chain.next
       es.each {|time,record|
-        puts "Receive!"
         priority = case record["job_priority"]
                    when "high"
                      1
