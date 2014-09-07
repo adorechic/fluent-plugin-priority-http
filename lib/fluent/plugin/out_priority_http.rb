@@ -19,17 +19,21 @@ module Fluent
           if job_priority
             job = @queue[job_priority].shift
             @mutex.unlock
-            uri = URI.parse("http://example.com/")
-            req = Net::HTTP::Post.new(uri.path)
-            res = Net::HTTP.start(uri.host, uri.port) do |http|
-              http.request(req, job.to_json)
-            end
+            invoke(job)
             @mutex.lock
           else
             @cond.wait(@mutex)
           end
         end
         @mutex.unlock
+      end
+    end
+
+    def invoke(data)
+      uri = URI.parse("http://example.com/")
+      req = Net::HTTP::Post.new(uri.path)
+      res = Net::HTTP.start(uri.host, uri.port) do |http|
+        http.request(req, data.to_json)
       end
     end
 
