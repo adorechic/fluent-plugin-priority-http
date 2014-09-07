@@ -8,6 +8,7 @@ rescue Bundler::BundlerError => e
   exit e.status_code
 end
 require 'test/unit'
+require 'pry'
 require 'mocha/setup'
 require 'webmock/test_unit'
 

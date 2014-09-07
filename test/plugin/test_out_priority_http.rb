@@ -40,4 +40,20 @@ class PriorityHttpOutputTest < Test::Unit::TestCase
       d.emit(a: 2)
     end
   end
+
+  def test_prior_high_priority
+    d = create_driver
+
+    d.instance.expects(:invoke).with(a: 1) { sleep 1 }
+
+    seq = sequence('seq')
+    d.instance.expects(:invoke).with(a: 3, 'job_priority' => 'high').in_sequence(seq)
+    d.instance.expects(:invoke).with(a: 2).in_sequence(seq)
+
+    d.run do
+      d.emit(a: 1)
+      d.emit(a: 2)
+      d.emit(a: 3, 'job_priority' => 'high')
+    end
+  end
 end
